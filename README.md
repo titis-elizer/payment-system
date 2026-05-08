@@ -16,8 +16,8 @@ Infrastructure:
 
 ## 1) Requirement
 
-- Docker Desktop aktif
-- Docker Compose v2
+- Active Docker Desktop
+- Docker Compose V2
 
 ## 2) Run Application
 
@@ -42,16 +42,16 @@ Container that needed to appear:
 - `payment-system-postgres-1`
 - `payment-system-zookeeper-1`
 
-## 3) Alur penggunaan normal
-1. Buat order ke `order-service`.
+## 3) Normal Workflow
+1. Make order to `order-service`.
 2. `order-service` publish event `order-created`.
-3. `payment-service` consume event dan **membuat payment status `PENDING`** (belum charge).
-4. Saat user siap bayar, panggil `POST /payments/confirm?txId=...`.
-5. `payment-service` melakukan charge (dengan retry timeout), lalu update `SUCCESS`.
+3. `payment-service` consume event and **make payment status `PENDING`**.
+4. When user paid,  `POST /payments/confirm?txId=...`.
+5. `payment-service` do retry timeout using charge, then update `SUCCESS`.
 6. `payment-service` publish `payment-success`.
-7. `notification-service` consume event, **buat notifikasi**, simpan ke tabel `notifications`, dan publish event `notification-sent`.
+7. `notification-service` consume event, **make notif**, save to table `notifications`, and publish event `notification-sent`.
 
-Contoh buat order:
+example:
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:8081/orders" `
@@ -59,25 +59,25 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:8081/orders" `
   -Body (([pscustomobject]@{customerId="C1";amount=100}) | ConvertTo-Json)
 ```
 
-Pantau log:
+ log:
 
 ```bash
 docker compose logs -f payment-service notification-service
 ```
 
-Cek notifikasi yang tersimpan:
+check saved notification:
 
 ```bash
 docker exec -i payment-system-postgres-1 psql -U postgres -d paymentdb -c "select id, transaction_id, amount, sender_customer_id, local_date_time, channel, status from notifications order by id desc limit 10;"
 ```
 
-Cek payment pending terbaru:
+Check payment pending :
 
 ```bash
 docker exec -i payment-system-postgres-1 psql -U postgres -d paymentdb -c "select id, transaction_id, order_id, customer_id, amount, status from payments order by id desc limit 5;"
 ```
 
-Lakukan konfirmasi pembayaran (contoh order id = 1 -> txId = TX-1):
+confirm payment (example order id = 1 -> txId = TX-1):
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments/confirm?txId=TX-1"
@@ -85,12 +85,12 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments/confirm?txId
 
 ---
 
-## Pengetesan Kriteria
+## Criteria
 
 ## Kriteria 1: Payment gateway callback bisa lebih dari satu kali
 
-Buat payment valid dulu (contoh txId dari order yang sudah ada):
-
+buat payment misal :
+ 
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments/confirm?txId=TX-1"
 ```
