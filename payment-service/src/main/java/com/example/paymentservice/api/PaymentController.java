@@ -21,6 +21,11 @@ public class PaymentController {
         return ResponseEntity.ok(service.process(txId, amount));
     }
 
+    @PostMapping("/confirm")
+    public ResponseEntity<Payment> confirm(@RequestParam String txId) {
+        return ResponseEntity.ok(service.confirm(txId));
+    }
+
     @PostMapping("/callback")
     public ResponseEntity<String> callback(@RequestParam String txId) {
         service.handleCallback(txId);

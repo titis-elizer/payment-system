@@ -71,12 +71,16 @@ services:
       context: ./notification-service
       dockerfile: Dockerfile
     depends_on:
+      - postgres
       - kafka
     ports:
       - "8083:8083"
     environment:
       SERVER_PORT: 8083
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paymentdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
 
 volumes:
   pgdata:

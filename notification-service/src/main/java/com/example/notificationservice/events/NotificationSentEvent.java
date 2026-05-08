@@ -1,6 +1,7 @@
-package com.example.paymentservice.events;
+package com.example.notificationservice.events;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,9 +11,12 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentSuccessEvent {
+public class NotificationSentEvent {
     private String transactionId;
     private BigDecimal amount;
-    private String customerId;
+    private String senderCustomerId;
+    private LocalDateTime localDateTime;
+    private String message;
+    private String channel;
 }
 

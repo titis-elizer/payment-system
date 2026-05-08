@@ -1,33 +1,32 @@
-package com.example.paymentservice.entity;
+package com.example.notificationservice.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(
-        name = "payments",
-        uniqueConstraints = @UniqueConstraint(columnNames = "transactionId")
-)
+@Table(name = "notifications")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Payment {
+public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String transactionId;
-    private Long orderId;
-    private String customerId;
     private BigDecimal amount;
+    private String senderCustomerId;
+    private LocalDateTime localDateTime;
+    private String message;
+    private String channel;
     private String status;
 }
 

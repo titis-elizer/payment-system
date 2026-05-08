@@ -11,5 +11,6 @@ import lombok.Setter;
 public class PaymentSuccessEvent {
     private String transactionId;
     private BigDecimal amount;
+    private String customerId;
 }
 

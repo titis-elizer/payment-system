@@ -13,10 +13,7 @@ public class PaymentConsumer {
 
     @KafkaListener(topics = "order-created", groupId = "payment-service")
     public void consume(OrderCreatedEvent event) {
-        paymentService.process(
-                "TX-" + event.getId(),
-                event.getAmount()
-        );
+        paymentService.createPendingFromOrder(event);
     }
 }
 

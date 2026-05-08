@@ -1,39 +1,39 @@
 # Payment System (3 Microservices)
 
-Project ini terdiri dari 3 microservices Spring Boot:
+This project consist of 3 microservices:
 
 - `order-service` (`8081`)
 - `payment-service` (`8082`)
 - `notification-service` (`8083`)
 
-Infrastruktur:
+Infrastructure:
 
 - PostgreSQL (`5432`)
 - ZooKeeper (`2181`)
 - Kafka (`9092` host, `29092` internal docker network)
 
-## Cara Pakai Microservices
+## Usage
 
-## 1) Prasyarat
+## 1) Requirement
 
 - Docker Desktop aktif
 - Docker Compose v2
 
-## 2) Jalankan aplikasi
+## 2) Run Application
 
-Di root project:
+In root project:
 
 ```bash
 docker compose up -d --build
 ```
 
-Cek semua container:
+Check all containers:
 
 ```bash
 docker ps
 ```
 
-Container yang harus muncul:
+Container that needed to appear:
 
 - `payment-system-order-service-1`
 - `payment-system-payment-service-1`
@@ -43,12 +43,13 @@ Container yang harus muncul:
 - `payment-system-zookeeper-1`
 
 ## 3) Alur penggunaan normal
-
 1. Buat order ke `order-service`.
 2. `order-service` publish event `order-created`.
-3. `payment-service` consume event, proses pembayaran, simpan payment.
-4. Jika sukses, `payment-service` publish `payment-success`.
-5. `notification-service` consume event dan kirim notifikasi (log).
+3. `payment-service` consume event dan **membuat payment status `PENDING`** (belum charge).
+4. Saat user siap bayar, panggil `POST /payments/confirm?txId=...`.
+5. `payment-service` melakukan charge (dengan retry timeout), lalu update `SUCCESS`.
+6. `payment-service` publish `payment-success`.
+7. `notification-service` consume event, **buat notifikasi**, simpan ke tabel `notifications`, dan publish event `notification-sent`.
 
 Contoh buat order:
 
@@ -64,16 +65,34 @@ Pantau log:
 docker compose logs -f payment-service notification-service
 ```
 
+Cek notifikasi yang tersimpan:
+
+```bash
+docker exec -i payment-system-postgres-1 psql -U postgres -d paymentdb -c "select id, transaction_id, amount, sender_customer_id, local_date_time, channel, status from notifications order by id desc limit 10;"
+```
+
+Cek payment pending terbaru:
+
+```bash
+docker exec -i payment-system-postgres-1 psql -U postgres -d paymentdb -c "select id, transaction_id, order_id, customer_id, amount, status from payments order by id desc limit 5;"
+```
+
+Lakukan konfirmasi pembayaran (contoh order id = 1 -> txId = TX-1):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments/confirm?txId=TX-1"
+```
+
 ---
 
 ## Pengetesan Kriteria
 
 ## Kriteria 1: Payment gateway callback bisa lebih dari satu kali
 
-buat order misal :
- 
+Buat payment valid dulu (contoh txId dari order yang sudah ada):
+
 ```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments?txId=TX-CB-1&amount=100"
+Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments/confirm?txId=TX-1"
 ```
 
 Gunakan txId yang sama berkali-kali:
@@ -107,7 +126,7 @@ Artinya untuk txId baru, 2 attempt pertama timeout, lalu retry berhasil.
 Test command:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments?txId=TX-TIMEOUT-1&amount=500"
+Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments/confirm?txId=TX-2"
 ```
 
 Lihat bukti timeout + retry di log:
@@ -124,18 +143,18 @@ Expected:
 
 ## Kriteria 3: Sistem tidak boleh double charge
 
-Panggil endpoint payment berkali-kali dengan txId sama:
+Panggil endpoint confirm berkali-kali dengan txId sama:
 
 ```powershell
 1..5 | ForEach-Object {
-  Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments?txId=TX-IDEMP-1&amount=100"
+  Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments/confirm?txId=TX-3"
 }
 ```
 
-Cek row count di DB:
+Cek row count di DB (tetap 1 row untuk txId itu):
 
 ```bash
-docker exec -i payment-system-postgres-1 psql -U postgres -d paymentdb -c "select count(*) from payments where transaction_id='TX-IDEMP-1';"
+docker exec -i payment-system-postgres-1 psql -U postgres -d paymentdb -c "select count(*) from payments where transaction_id='TX-3';"
 ```
 
 Expected:
