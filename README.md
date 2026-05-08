@@ -70,7 +70,7 @@ docker compose logs -f payment-service notification-service
 
 ## Kriteria 1: Payment gateway callback bisa lebih dari satu kali
 
-buat order misal :
+buat payment misal :
  
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:8082/payments?txId=TX-CB-1&amount=100"
